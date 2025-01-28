@@ -13,11 +13,12 @@ BUILD_DIR=$WORK_DIR/build/docker-linux
 if [[ -d "$LIBS_ROOT/sdl" ]]; then
   cp -va $LIBS_ROOT/sdl/include/* /usr/include/
   SYSTEM_ARCH=$(uname -m)
-  if [[ $SYSTEM_ARCH = "aarch64" ]]; then
-    cp -va $LIBS_ROOT/sdl/lib/* /usr/lib/aarch64-linux-gnu/
-  else
-    cp -va $LIBS_ROOT/sdl/lib/* /usr/lib/x86_64-linux-gnu/
+  SYSTEM_ARCH_LIBS="/usr/lib/${SYSTEM_ARCH}-linux-gnu/"
+  if [[ ! -d $SYSTEM_ARCH_LIBS ]]; then
+    echo "${SYSTEM_ARCH_LIBS} not found! maybe this arch '${SYSTEM_ARCH}' need's different path?"
+    exit 1
   fi
+  cp -va $LIBS_ROOT/sdl/lib/* $SYSTEM_ARCH_LIBS
 fi
 
 #rm -rf $BUILD_DIR
