@@ -18,17 +18,18 @@ jobs:
       fail-fast: false
       matrix:
         env: [
-          {name: "Release",                       build_type: Release, arch: x86_64, upload: true,  cmake: ""},
-          {name: "Debug",                         build_type: Debug,   arch: x86_64, upload: true,  cmake: ""},
-          {name: "Debug D3D9 + Sokol + Asserts",  build_type: Debug,   arch: x86_64, upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=ON -DOPTION_DEBUG_ASSERT=ON"},
-          {name: "Release D3D9 + Sokol",          build_type: Release, arch: x86_64, upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=ON"},
-          {name: "Debug D3D9",                    build_type: Debug,   arch: x86_64, upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=OFF"},
-          {name: "Debug Sokol",                   build_type: Debug,   arch: x86_64, upload: false, cmake: "-DOPTION_D3D9=OFF -DOPTION_SOKOL=ON"},
-          {name: "Scripts Check",                 build_type: Release, arch: x86_64, upload: false, cmake: "-DOPTION_CHECK_SCRIPTS=ON "},
+          {name: "Release",                       build_type: Release, arch: x86_64, os: ubuntu-latest,    upload: true,  cmake: ""},
+          {name: "Release",                       build_type: Release, arch: arm64,  os: ubuntu-24.04-arm, upload: true,  cmake: ""},
+          {name: "Debug",                         build_type: Debug,   arch: x86_64, os: ubuntu-latest,    upload: true,  cmake: ""},
+          {name: "Debug D3D9 + Sokol + Asserts",  build_type: Debug,   arch: x86_64, os: ubuntu-latest,    upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=ON -DOPTION_DEBUG_ASSERT=ON"},
+          {name: "Release D3D9 + Sokol",          build_type: Release, arch: x86_64, os: ubuntu-latest,    upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=ON"},
+          {name: "Debug D3D9",                    build_type: Debug,   arch: x86_64, os: ubuntu-latest,    upload: false, cmake: "-DOPTION_D3D9=ON -DOPTION_SOKOL=OFF"},
+          {name: "Debug Sokol",                   build_type: Debug,   arch: x86_64, os: ubuntu-latest,    upload: false, cmake: "-DOPTION_D3D9=OFF -DOPTION_SOKOL=ON"},
+          {name: "Scripts Check",                 build_type: Release, arch: x86_64, os: ubuntu-latest,    upload: false, cmake: "-DOPTION_CHECK_SCRIPTS=ON "},
         ]
     name: ${{matrix.env.name}} ${{matrix.env.arch}}
     if: github.event.pull_request.draft != true
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.env.os}}
     container:
       image: "debian:buster"
     steps:
