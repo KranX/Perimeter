@@ -1,24 +1,32 @@
 #include "StdAfxSound.h"
 #include "SoundInternal.h"
 #include "Sample.h"
+#include "../Render/inc/RenderMT.h"
 #include <unordered_map>
 
 ///Used for tracking what channel is playing what sample, if sample is not here then is not being played
-std::unordered_map<int, SND_Sample*> channelSamples;
+std::vector<SND_Sample*> channelSamples;
+
+/*
+ * TODO replace this lock usage with proper SDL_LockAudioDevice/SDL_UnlockAudioDevice
+ * once there is a way to obtain SDL_AudioDeviceID from SDL_Mixer (port game to SDL3?)
+ */
+MTSection channelSamplesLock;
 
 // make a channelDone function
 static void callbackChannelFinished(int channel)
 {
     //printf("Channel %d finished playing.\n", channel);
-    channelSamples.erase(channel);
+    MTAuto mtenter(&channelSamplesLock);
+    channelSamples[channel] = nullptr;
 }
 
-void SNDSetupChannelCallback(bool init) {
+void SNDSetupChannelCallback(int mixChannels, bool init) {
     Mix_ChannelFinished(init ? callbackChannelFinished : nullptr);
-    if (!init) {
-        SDL_LockAudio();
+    if (init) {
+        channelSamples.resize(mixChannels, nullptr);
+    } else {
         channelSamples.clear();
-        SDL_UnlockAudio();
     }
 }
 
@@ -121,14 +129,17 @@ int SND_Sample::play() {
         chunk_play->volume = getChunkSource()->volume;
         bool loop = this->external_looped_restart ? false : this->looped; //Set loop flag if not externally controlled 
         channel = Mix_PlayChannel(channel, chunk_play, loop ? -1 : 0);
-        if(channel == -1) { //Return's -1 if fails to play
+        if (channel == -1) { //Return's -1 if fails to play
             fprintf(stderr, "Mix_PlayChannel error (%s): %s\n",  chunk->fileName.c_str(), Mix_GetError());
             channel = SND_NO_CHANNEL;
         } else {
             //Store channel for callback
-            SDL_LockAudio();
+            //SDL_LockAudioDevice();
+            xassert(channel < channelSamples.size());
+            MTAuto mtenter(&channelSamplesLock);
+            xassert(channelSamples[channel] == nullptr);
             channelSamples[channel] = this;
-            SDL_UnlockAudio();
+            //SDL_UnlockAudioDevice();
         }
         
     }
@@ -193,15 +204,16 @@ bool SND_Sample::updateEffects() {
 
 int SND_Sample::getChannel() const {
     if (!SND::has_sound_init) return SND_NO_CHANNEL;
-    SDL_LockAudio();
+    //SDL_LockAudioDevice();
+    MTAuto mtenter(&channelSamplesLock);
     int channel = SND_NO_CHANNEL;
-    for (auto entry : channelSamples) {
-        if (entry.second == this) {
-            channel = entry.first;
+    for (int i = 0; i < channelSamples.size(); ++i) {
+        if (channelSamples[i] == this) {
+            channel = i;
             break;
         }
     }
-    SDL_UnlockAudio();
+    //SDL_UnlockAudioDevice();
     return channel;
 }
 
